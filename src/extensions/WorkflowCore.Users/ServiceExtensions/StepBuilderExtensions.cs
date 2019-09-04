@@ -22,7 +22,7 @@ namespace WorkflowCore.Interface
         {
             var newStep = new UserStepContainer();
             newStep.Principal = assigner;
-            newStep.UserPrompt = userPrompt;            
+            newStep.UserPrompt = userPrompt;
             builder.WorkflowBuilder.AddStep(newStep);
             var stepBuilder = new StepBuilder<TData, UserStep>(builder.WorkflowBuilder, newStep);
 
@@ -51,13 +51,28 @@ namespace WorkflowCore.Interface
             return stepBuilder;
         }
 
+
+        public static IUserTaskBuilder<TData> UserTask<TData, TStepBody>(this IStepBuilder<TData, TStepBody> builder, string userPrompt, Expression<Func<TData, IStepExecutionContext, string>> assigner, Action<IStepBuilder<TData, UserTask>> stepSetup = null)
+            where TStepBody : IStepBody
+        {
+            return BuildUserTask(builder, userPrompt, null, assigner, stepSetup);
+        }
+
         public static IUserTaskBuilder<TData> UserTask<TData, TStepBody>(this IStepBuilder<TData, TStepBody> builder, string userPrompt, Expression<Func<TData, string>> assigner, Action<IStepBuilder<TData, UserTask>> stepSetup = null)
             where TStepBody : IStepBody
+        {
+            return BuildUserTask(builder, userPrompt, assigner, null, stepSetup);
+        }
+
+        private static IUserTaskBuilder<TData> BuildUserTask<TData, TStepBody>(IStepBuilder<TData, TStepBody> builder, string userPrompt, Expression<Func<TData, string>> assigner = null, Expression<Func<TData, IStepExecutionContext, string>> assignerWithContext = null, Action<IStepBuilder<TData, UserTask>> stepSetup = null) where TStepBody : IStepBody
         {
             var newStep = new UserTaskStep();
             builder.WorkflowBuilder.AddStep(newStep);
             var stepBuilder = new UserTaskBuilder<TData>(builder.WorkflowBuilder, newStep);
-            stepBuilder.Input(step => step.AssignedPrincipal, assigner);
+            if (assignerWithContext != null)
+                stepBuilder.Input(step => step.AssignedPrincipal, assignerWithContext);
+            else
+                stepBuilder.Input(step => step.AssignedPrincipal, assigner);
             stepBuilder.Input(step => step.Prompt, data => userPrompt);
 
             if (stepSetup != null)
